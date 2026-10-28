@@ -85,6 +85,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sugg[hidden] { display: none; }
 .sugg-item { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 11px 14px; border-radius: 14px; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; }
 .sugg-item:hover, .sugg-item:focus-visible { background: rgba(17, 17, 17, .06); }
+.tb-right { display: flex; align-items: center; gap: 8px; }
+.edit-btn { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--paper); box-shadow: inset 0 0 0 2px var(--rule); transition: box-shadow .2s; }
+.edit-btn:hover { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.edit-btn[hidden] { display: none; }
 .mark.home { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .mark { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: var(--display-wght); letter-spacing: var(--display-track); font-size: 20px; line-height: 1; }
@@ -385,9 +389,12 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
       <svg width="18" height="23" viewBox="0 0 18 23" aria-hidden="true"><path d="M5 1h8l4 4v17H1V5z" fill="var(--day)"/><circle cx="9" cy="6.4" r="2" fill="var(--paper)"/></svg>
       Lucky Fit
     </button>
+    <div class="tb-right">
     <div class="seg" role="group" aria-label="Which day" id="daySeg">
       <button type="button" data-which="today" aria-pressed="true">Today</button>
       <button type="button" data-which="tomorrow" aria-pressed="false">Tomorrow</button>
+    </div>
+    <button type="button" class="edit-btn" id="editBtn" data-screen="setup" aria-label="Edit birthday, city and style" title="Edit my details"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h9M16 6h1M3 14h1M8 14h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="14" cy="6" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="14" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
     </div>
   </header>
   <div id="screen"></div>
@@ -680,10 +687,9 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
         <section class="card r-weather" aria-label="Forecast">
           <div class="fc-top">
             <div class="fc-temps"><span class="big num">${deg(W.min)}<span class="to">→</span>${deg(W.max)}</span><span class="sky">${W.sky}</span></div>
-            <button type="button" class="city" data-screen="setup">📍 ${W.city}</button>
+            <button type="button" class="city" data-screen="setup" data-focus="city" aria-label="Change city">📍 ${W.city}</button>
           </div>
           <div class="chart">${chart(W)}</div>
-          <button type="button" class="hide" data-screen="setup" style="margin-top:12px">Edit birthday &amp; city</button>
         </section>
         <section class="r-plan">
           <div class="plan-head"><h2 class="section-h" id="planH">What's the plan?</h2><span class="count" aria-live="polite">${S.plans.length >= 3 ? "3 of 3 picked" : "Up to 3"}</span></div>
@@ -772,6 +778,7 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
     document.documentElement.dataset.type = S.type;
     applyColor(current());
     document.getElementById("daySeg").hidden = S.screen !== "today";
+    document.getElementById("editBtn").hidden = S.screen !== "today";
     document.body.dataset.screen = S.screen;
     if (S.screen === "today" && !S.live) S.screen = S.city ? "loading" : "setup";
     $screen.innerHTML = S.screen === "loading" ? `<div class="hero"><h1 class="display" style="font-size:clamp(26px,4vw,40px)">Checking the sky…</h1></div>` : S.screen === "welcome" ? welcomeView() : S.screen === "setup" ? setupView() : todayView();
@@ -820,7 +827,7 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
     if (t.dataset.wear) { S.wear = t.dataset.wear; store.set("wear", S.wear); render(); return; }
     if (t.id === "locate") { locate(); return; }
     if (t.id === "save") { saveImage(t); return; }
-    if (t.dataset.screen) { S.screen = t.dataset.screen; store.set("screen", S.screen); render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (t.dataset.screen) { S.screen = t.dataset.screen; store.set("screen", S.screen); render(); window.scrollTo({ top: 0, behavior: "smooth" }); if (t.dataset.focus) { const f = document.getElementById(t.dataset.focus); if (f) { f.focus(); f.select(); } } return; }
     if (t.dataset.plan) { const p = t.dataset.plan; if (S.plans.includes(p)) S.plans = S.plans.filter(x => x !== p); else if (S.plans.length < 3) S.plans.push(p); render(); return; }
     if (t.id === "undo") { S.hidden = S.toast.undo.hidden; S.picks = S.toast.undo.picks; store.set("hidden", S.hidden); S.toast = null; render(); return; }
     if (t.dataset.hide) {
