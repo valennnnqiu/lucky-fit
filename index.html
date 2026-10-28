@@ -508,15 +508,18 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
     ul.hidden = !S.sugg.length;
     ul.innerHTML = S.sugg.map((c, i) => `<li><button type="button" class="sugg-item" role="option" data-pick="${i}">${c.q}</button></li>`).join("");
   }
+  async function searchCities(text) {
+    const name = text.split(",")[0].trim();
+    if (name.length < 2) return [];
+    const { results } = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=6&language=en`);
+    return (results || []).map(r => ({ q: [r.name, r.admin1, r.country].filter(Boolean).join(", "), name: r.name, lat: r.latitude, lon: r.longitude }));
+  }
   async function suggest(text) {
-    const n = ++suggN, name = text.split(",")[0].trim();
-    if (name.length < 2) { S.sugg = []; return paintSugg(); }
-    try {
-      const { results } = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=6&language=en`);
-      if (n !== suggN) return;
-      S.sugg = (results || []).map(r => ({ q: [r.name, r.admin1, r.country].filter(Boolean).join(", "), name: r.name, lat: r.latitude, lon: r.longitude }));
-    } catch { if (n !== suggN) return; S.sugg = []; }
-    paintSugg();
+    const n = ++suggN;
+    let list = [];
+    try { list = await searchCities(text); } catch {}
+    if (n !== suggN) return;
+    S.sugg = list; paintSugg();
   }
   function pick(c) { S.city = c; store.set("city", c); S.draft = c.q; S.sugg = []; render(); }
   async function loadWeather() {
@@ -608,9 +611,15 @@ body[data-screen="welcome"] .topbar, body[data-screen="welcome"] footer { animat
     const q = (document.getElementById("city")?.value ?? "").trim();
     if (!S.bday) return say("Pick your birthday for your lucky color");
     if (!q) return say("Add a city to get your forecast");
-    if (!S.city || S.city.q !== q) return say("Pick your city from the list");
     S.busy = true; S.draft = q; render();
-    try { await loadWeather(); } catch { S.busy = false; return say("Couldn't get a forecast for that city. Try again in a moment."); }
+    try {
+      if (!S.city || S.city.q !== q) {
+        const [first] = await searchCities(q);
+        if (!first) throw new Error("none");
+        S.city = first; store.set("city", first); S.draft = first.q;
+      }
+      await loadWeather();
+    } catch { S.busy = false; return say("Couldn't find that city. Try a bigger one nearby."); }
     S.busy = false; S.draft = null; S.screen = "today"; store.set("screen", "today"); render(); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function locate() {
