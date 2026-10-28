@@ -556,11 +556,7 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
   }
 
   function welcomeView() {
-    const fan = [0, 1, 2, 3, 4].map(i => COLORS[(S.color + 24 + i * 6) % COLORS.length]);
-    fan[2] = current();
-    const rot = [-20, -10, 0, 10, 20];
     return `<div class="hero">
-      <div class="fan" aria-hidden="true">${fan.map((c, i) => `<div class="chip" style="transform:rotate(${rot[i]}deg);z-index:${5 - Math.abs(2 - i)}"><div class="color" style="background:${c.hex}"></div><div class="label"><span class="name display">${c.name}</span></div></div>`).join("")}</div>
       <h1 class="display">Dress for the weather<br class="br"> in your <em>lucky</em> color</h1>
       <button type="button" class="btn go hero-cta" data-screen="setup">Find my color</button>
     </div>`;
