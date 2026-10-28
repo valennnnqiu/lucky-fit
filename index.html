@@ -79,9 +79,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .mark { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: var(--display-wght); letter-spacing: var(--display-track); font-size: 20px; line-height: 1; }
-.seg { display: inline-flex; background: var(--paper); border-radius: 999px; padding: 4px; box-shadow: inset 0 0 0 2px var(--rule); }
-.seg button { border: 0; background: transparent; height: 34px; padding: 0 14px; border-radius: 999px; font-weight: 800; font-size: 14px; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seg { display: inline-flex; gap: 8px; }
+.seg button { border: 0; background: var(--paper); box-shadow: inset 0 0 0 2px var(--rule); height: 42px; padding: 0 16px; border-radius: 999px; font-weight: 700; font-size: 15px; transition: background .2s, color .2s, box-shadow .2s; }
+.seg button:hover:not([aria-pressed="true"]) { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); box-shadow: none; }
 
 .layout { display: grid; gap: 26px; margin-top: 22px; }
 @media (min-width: 960px) {
@@ -389,8 +390,8 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     cold: { label: "Cold", city: "Toronto", sky: "Clear and cold", min: -1, max: 5, detail: "1° at 8am, 5° by 2pm. Dry.",
       feels: [1,0,1,2,3,4,5,5,5,4,3,1,-1], pop: [0,0,0,0,0,0,0,5,5,5,5,0,0],
       pieces: [
-        { slot: "outer", id: "coat", c: N.charcoal, why: "−1° at its coldest", alts: ["puffer","trench"] },
-        { slot: "mid", id: "sweater", lucky: true, why: "Warm for a 1° start", alts: ["knit","cardigan"] },
+        { slot: "outer", id: "coat", c: N.charcoal, why: "{min} at its coldest", alts: ["puffer","trench"] },
+        { slot: "mid", id: "sweater", lucky: true, why: "Warm for a {start} start", alts: ["knit","cardigan"] },
         { slot: "base", id: "blouse", c: N.optic, why: "Office-ready", alts: ["shirt-buttondown","polo"] },
         { slot: "bottom", id: "trousers", c: N.camel, why: "Comfy at a desk", alts: ["pants","skirt-midi"] },
         { slot: "shoes", id: "boots", c: N.black, why: "Warm feet", alts: ["loafers","flats"] },
@@ -399,8 +400,8 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     rain: { label: "Rain", city: "Toronto", sky: "Rainy and cool", min: 5, max: 9, detail: "6° at 8am, 9° by 2pm. Rain from 3pm.",
       feels: [6,6,7,8,8,9,9,9,8,8,7,6,5], pop: [5,5,10,10,15,20,35,80,85,80,70,60,40],
       pieces: [
-        { slot: "outer", id: "trench", c: N.stone, why: "Rain from 3pm", alts: ["raincoat","coat"] },
-        { slot: "mid", id: "knit", lucky: true, why: "Warm for a 6° start", alts: ["sweater","cardigan"] },
+        { slot: "outer", id: "trench", c: N.stone, why: "Rain on the way", alts: ["raincoat","coat"] },
+        { slot: "mid", id: "knit", lucky: true, why: "Warm for a {start} start", alts: ["sweater","cardigan"] },
         { slot: "base", id: "shirt-buttondown", c: N.pale, why: "Office-ready", alts: ["blouse","polo"] },
         { slot: "bottom", id: "trousers", c: N.charcoal, why: "Hides splashes", alts: ["pants","jeans"] },
         { slot: "shoes", id: "boots", c: N.black, why: "Dry feet", alts: ["loafers","oxfords"] },
@@ -410,12 +411,15 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
       feels: [24,25,27,28,29,30,30,30,29,28,26,24,22], pop: [0,0,0,0,0,0,0,0,0,0,0,0,0],
       pieces: [
         { slot: "onepiece", id: "slip-dress", lucky: true, why: "One piece, done", alts: ["mini-dress","maxi-dress"] },
-        { slot: "shoes", id: "sandals", c: N.camel, why: "30° and dry", alts: ["heels","flats"] },
+        { slot: "shoes", id: "sandals", c: N.camel, why: "{max} and dry", alts: ["heels","flats"] },
       ],
       notes: ["🕶️ Sunglasses at noon", "💧 Bring water"] },
   };
-  const SIGN = { fire: "Leo", earth: "Taurus", air: "Aquarius", water: "Scorpio" };
-  const VIBE = { fire: "main character day", earth: "low-key steady day", air: "chatty, light day", water: "calm on the outside day" };
+  const ZODIAC = [["Capricorn",1,19,"earth"],["Aquarius",2,18,"air"],["Pisces",3,20,"water"],["Aries",4,19,"fire"],["Taurus",5,20,"earth"],["Gemini",6,20,"air"],["Cancer",7,22,"water"],["Leo",8,22,"fire"],["Virgo",9,22,"earth"],["Libra",10,22,"air"],["Scorpio",11,21,"water"],["Sagittarius",12,21,"fire"],["Capricorn",12,31,"earth"]];
+  const zodiac = ({ m, d }) => ZODIAC.find(([, mm, dd]) => m < mm || (m === mm && d <= dd));
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  const NEUTRAL = { name: "Your color", hex: "#DAD8E0", el: null };
   const TYPES = [
     { id: "unbounded", label: "Unbounded", note: "wide + chunky, very now" },
     { id: "bagel", label: "Bagel Fat One", note: "bubbly, sticker-y" },
@@ -427,6 +431,7 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     set(k, v) { try { localStorage.setItem("luckyfit:" + k, JSON.stringify(v)); } catch {} },
   };
   const S = { type: store.get("type", "unbounded"), color: store.get("color", 2), weather: store.get("weather", "cold"), screen: store.get("screen", "welcome"),
+    bday: store.get("bday", null), city: store.get("city", null), wear: store.get("wear", "both"), live: null, draft: null, busy: false,
     which: "today", plans: ["office"], open: null, hidden: store.get("hidden", []), toast: null, labOpen: false, picks: {}, luckySlot: null };
 
   const hx = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -436,7 +441,68 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
   const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
   const deg = v => (v < 0 ? "−" : "") + Math.abs(v) + "°";
 
-  const current = () => S.which === "today" ? COLORS[S.color] : COLORS[(S.color + 9) % COLORS.length];
+  const dayNum = off => { const t = new Date(); return Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate() + off) / 864e5); };
+  const current = () => {
+    if (!S.bday) return NEUTRAL;
+    const pool = COLORS.filter(c => c.el === zodiac(S.bday)[3]);
+    return pool[(dayNum(S.which === "today" ? 0 : 1) + S.bday.m * 31 + S.bday.d) % pool.length];
+  };
+
+  const liveDay = () => S.live.days[S.which === "today" ? 0 : 1];
+  function weather() {
+    const B = WEATHER[S.live ? liveDay().scen : S.weather], L = S.live ? liveDay() : B;
+    const fill = t => t.replace("{min}", deg(L.min)).replace("{max}", deg(L.max)).replace("{start}", deg(L.feels[0]));
+    const pieces = B.pieces.map(p => ({ ...p, why: fill(p.why) }));
+    return S.live ? { ...B, city: S.live.city, sky: L.sky, min: L.min, max: L.max, detail: L.detail, feels: L.feels, pop: L.pop, pieces } : { ...B, pieces };
+  }
+  const hourLabel = i => { const h = 8 + i; return h === 12 ? "12pm" : h > 12 ? (h - 12) + "pm" : h + "am"; };
+  function shapeDay(feels, pop, code) {
+    const min = Math.min(...feels), max = Math.max(...feels), wet = Math.max(...pop);
+    const scen = wet >= 50 ? "rain" : feels.reduce((a, b) => a + b, 0) / feels.length >= 18 ? "warm" : "cold";
+    const cond = scen === "rain" ? "Rainy" : code <= 1 ? "Clear" : code <= 3 ? "Cloudy" : code <= 48 ? "Foggy" : code <= 67 || (code >= 80 && code <= 82) ? "Rainy" : code <= 86 ? "Snowy" : "Stormy";
+    const word = max <= 5 ? "cold" : max <= 12 ? "cool" : max <= 22 ? "mild" : max <= 28 ? "warm" : "hot";
+    const first = pop.findIndex(v => v >= 50);
+    const rain = wet < 20 ? "Dry." : first >= 0 ? `Rain from ${hourLabel(first)}.` : "Chance of rain.";
+    return { scen, min, max, feels, pop, sky: `${cond} and ${word}`, detail: `${deg(feels[0])} at 8am, ${deg(feels[6])} by 2pm. ${rain}` };
+  }
+  async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+  async function geocode(q) {
+    const [name, region] = q.split(",").map(x => x.trim());
+    const { results } = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en`);
+    if (!results || !results.length) throw new Error("none");
+    const r = (region && results.find(x => [x.admin1, x.country, x.country_code].some(v => v && v.toLowerCase().startsWith(region.toLowerCase())))) || results[0];
+    return { q, name: r.name, lat: r.latitude, lon: r.longitude };
+  }
+  async function loadWeather() {
+    const { lat, lon, name } = S.city;
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=apparent_temperature,precipitation_probability,weather_code&forecast_days=2&timezone=auto`);
+    const h = j.hourly, days = [0, 1].map(d => {
+      const at = k => h[k].slice(d * 24 + 8, d * 24 + 21);
+      return shapeDay(at("apparent_temperature").map(Math.round), at("precipitation_probability").map(v => v || 0), h.weather_code[d * 24 + 12]);
+    });
+    S.live = { city: name, days };
+  }
+  function say(text) { S.toast = { text }; render(); clearTimeout(window.__tt); window.__tt = setTimeout(() => { S.toast = null; render(); }, 4000); }
+  async function submitSetup() {
+    if (S.busy) return;
+    const q = (document.getElementById("city")?.value ?? "").trim();
+    if (!S.bday) return say("Pick your birthday for your lucky color");
+    if (!q) return say("Add a city to get your forecast");
+    S.busy = true; S.draft = q; render();
+    try {
+      if (!S.city || S.city.q !== q) { S.city = await geocode(q); store.set("city", S.city); }
+      await loadWeather();
+    } catch { S.busy = false; return say("Couldn't get a forecast for that city. Try a bigger one nearby."); }
+    S.busy = false; S.draft = null; S.screen = "today"; store.set("screen", "today"); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function locate() {
+    if (!navigator.geolocation) return say("Location isn't available here");
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: lat, longitude: lon } = pos.coords; let name = "My location";
+      try { const g = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`); name = g.city || g.locality || name; } catch {}
+      S.city = { q: name, name, lat, lon }; store.set("city", S.city); S.draft = name; render();
+    }, () => say("Couldn't get your location. Type a city instead."), { timeout: 8000 });
+  }
   function applyColor(c) {
     const r = document.documentElement.style;
     r.setProperty("--day", c.hex);
@@ -451,10 +517,12 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     `<div class="garment" style="--c:${c};--m:url(garments/${id}.fill.png)" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}><div class="fill"></div><img src="garments/${id}.line.png" alt=""></div>`;
 
   function outfit() {
-    const W = WEATHER[S.weather], col = current();
+    const W = weather(), col = current();
     const luckySlot = S.luckySlot && W.pieces.some(p => p.slot === S.luckySlot) ? S.luckySlot : W.pieces.find(p => p.lucky).slot;
     return W.pieces.map(p => {
-      const all = [p.id, ...p.alts];
+      let all = [p.id, ...p.alts];
+      const sk = a => /skirt|dress/.test(a), pref = S.wear === "pants" ? all.filter(a => !sk(a)) : S.wear === "skirts" ? [...all.filter(sk), ...all.filter(a => !sk(a))] : all;
+      if (pref.length) all = pref;
       const owned = all.filter(a => !S.hidden.includes(a));
       const options = owned.length ? owned : all;
       const picked = S.picks[p.slot];
@@ -484,8 +552,8 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
 
   function colorChip(col, label) {
     return `<div class="chips">
-      <div class="chip ghost g2" aria-hidden="true"><div class="color" style="background:${COLORS[(COLORS.indexOf(col) + 13) % COLORS.length].hex}"></div></div>
-      <div class="chip ghost g1" aria-hidden="true"><div class="color" style="background:${COLORS[(COLORS.indexOf(col) + 5) % COLORS.length].hex}"></div></div>
+      <div class="chip ghost g2" aria-hidden="true"><div class="color" style="background:${col === NEUTRAL ? "#E9E7EE" : COLORS[(COLORS.indexOf(col) + 13) % COLORS.length].hex}"></div></div>
+      <div class="chip ghost g1" aria-hidden="true"><div class="color" style="background:${col === NEUTRAL ? "#E2E0E8" : COLORS[(COLORS.indexOf(col) + 5) % COLORS.length].hex}"></div></div>
       <article class="chip main-chip" id="mainChip" aria-label="${label}: ${col.name}">
         <div class="color"></div>
         <div class="label"><h1 class="name display">${col.name}</h1></div>
@@ -494,14 +562,14 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
   }
 
   function todayView() {
-    const W = WEATHER[S.weather], col = current(), pcs = outfit();
+    const W = weather(), col = current(), pcs = outfit();
     const hero = pcs.find(p => p.lucky) || pcs[0], rest = pcs.filter(p => p !== hero);
     const plans = [["office","Office"],["meeting","Big meeting"],["school","Class"],["errands","Errands"],["brunch","Brunch"],["date","Date"],["party","Night out"],["gym","Gym"]];
     return `<div class="board">
         <section class="card r-weather" aria-label="Forecast">
           <div class="fc-top">
             <div class="fc-temps"><span class="big num">${deg(W.min)}<span class="to">→</span>${deg(W.max)}</span><span class="sky">${W.sky}</span></div>
-            <button type="button" class="city">📍 ${W.city}</button>
+            <button type="button" class="city" data-screen="setup">📍 ${W.city}</button>
           </div>
           <div class="chart">${chart(W)}</div>
         </section>
@@ -514,7 +582,7 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
           <svg class="string" viewBox="0 0 120 60" aria-hidden="true"><path d="M8 0 C 30 30, 52 46, 60 52 C 68 46, 90 30, 112 0" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/></svg>
           <div class="tag-wrap"><div class="tag">
             <span class="hole" aria-hidden="true"></span>
-            <div class="tag-top"><span class="mark">Lucky Fit</span><span>${S.which === "today" ? "Oct 27" : "Oct 28"}</span></div>
+            <div class="tag-top"><span class="mark">Lucky Fit</span><span>${new Date(Date.now() + (S.which === "today" ? 0 : 864e5)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span></div>
             <div class="lay" role="list" aria-label="Outfit">
               <div class="lay-hero" role="listitem">${garment(hero.id, hero.color.hex, `${NAMES[hero.id]} in ${hero.color.name}`)}</div>
               <div class="lay-row">${rest.map(p => `<div role="listitem">${garment(p.id, p.color.hex, `${NAMES[p.id]} in ${p.color.name}`)}</div>`).join("")}</div>
@@ -563,15 +631,17 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
   }
 
   function setupView() {
-    const col = current();
+    const col = current(), b = S.bday, dmax = b ? DIM[b.m - 1] : 31;
+    const opt = (v, l, on) => `<option value="${v}"${on ? " selected" : ""}>${l}</option>`;
+    const wear = [["pants", "Pants"], ["skirts", "Skirts + dresses"], ["both", "Both"]];
     return `<div class="layout">
-      <div class="left">${colorChip(col, "Your lucky color today")}<p class="sign"><b>${SIGN[col.el]}</b>, it's a ${VIBE[col.el]}.</p></div>
+      <div class="left">${colorChip(col, "Your lucky color today")}</div>
       <div class="right"><section class="card" style="padding:22px">
         <h2 class="section-h" style="font-size:26px">Quick setup</h2>
-        <div class="field"><label for="m">🎂 Birthday</label><div class="row"><select id="m"><option>November</option></select><select id="d" style="flex:.5"><option>8</option></select></div></div>
-        <div class="field"><label for="city">📍 City</label><div class="row"><input id="city" value="Toronto, Ontario"><button type="button" class="round" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 9.5L18 2l-7.5 16-1.6-6.9z" fill="currentColor"/></svg></button></div></div>
-        <div class="field"><label>👖 Usually wear</label><div class="pills" style="margin-top:0"><button class="pill" aria-pressed="false" type="button">Pants</button><button class="pill" aria-pressed="false" type="button">Skirts + dresses</button><button class="pill" aria-pressed="true" type="button">Both</button></div></div>
-        <button type="button" class="btn go" style="width:100%;margin-top:28px;height:58px;font-size:17px" data-screen="today">See my fit</button>
+        <div class="field"><label for="m">🎂 Birthday</label><div class="row"><select id="m">${opt("", "Month", !b).replace("<option", "<option disabled")}${MONTHS.map((n, i) => opt(i + 1, n, b && b.m === i + 1)).join("")}</select><select id="d" style="flex:.5">${opt("", "Day", !b).replace("<option", "<option disabled")}${Array.from({ length: dmax }, (_, i) => opt(i + 1, i + 1, b && b.d === i + 1)).join("")}</select></div></div>
+        <div class="field"><label for="city">📍 City</label><div class="row"><input id="city" placeholder="Search a city" autocomplete="off" value="${(S.draft ?? (S.city && S.city.q) ?? "").replace(/"/g, "&quot;")}"><button type="button" class="round" id="locate" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 9.5L18 2l-7.5 16-1.6-6.9z" fill="currentColor"/></svg></button></div></div>
+        <div class="field"><label>👖 Usually wear</label><div class="pills" style="margin-top:0">${wear.map(([k, l]) => `<button class="pill" type="button" data-wear="${k}" aria-pressed="${S.wear === k}">${l}</button>`).join("")}</div></div>
+        <button type="button" class="btn go" style="width:100%;margin-top:28px;height:58px;font-size:17px" data-screen="today"${S.busy ? " disabled" : ""}>${S.busy ? "Checking the sky…" : "See my fit"}</button>
       </section></div>
     </div>`;
   }
@@ -590,7 +660,8 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     applyColor(current());
     document.getElementById("daySeg").hidden = S.screen !== "today";
     document.body.dataset.screen = S.screen;
-    $screen.innerHTML = S.screen === "welcome" ? welcomeView() : S.screen === "setup" ? setupView() : todayView();
+    if (S.screen === "today" && !S.live) S.screen = S.city ? "loading" : "setup";
+    $screen.innerHTML = S.screen === "loading" ? `<div class="hero"><h1 class="display" style="font-size:clamp(26px,4vw,40px)">Checking the sky…</h1></div>` : S.screen === "welcome" ? welcomeView() : S.screen === "setup" ? setupView() : todayView();
     document.getElementById("toast").innerHTML = S.toast ? `<div class="toast"><span>${S.toast.text}</span>${S.toast.undo ? '<button type="button" id="undo">Undo</button>' : ""}</div>` : "";
   }
 
@@ -600,6 +671,9 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
     if (false) { S.labOpen = !S.labOpen; $lab.hidden = !S.labOpen; t.setAttribute("aria-expanded", S.labOpen); return; }
     if (t.dataset.set) { const [k, v] = t.dataset.set.split(":"); S[k] = k === "color" ? Number(v) : v; if (k === "weather") { S.picks = {}; S.luckySlot = null; S.open = null; } store.set(k, S[k]); render(); return; }
     if (t.dataset.which) { S.which = t.dataset.which; document.querySelectorAll("#daySeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.which === S.which)); S.picks = {}; S.luckySlot = null; render(); document.getElementById("mainChip")?.classList.add("popping"); return; }
+    if (t.dataset.screen === "today" && S.screen === "setup") { submitSetup(); return; }
+    if (t.dataset.wear) { S.wear = t.dataset.wear; store.set("wear", S.wear); render(); return; }
+    if (t.id === "locate") { locate(); return; }
     if (t.dataset.screen) { S.screen = t.dataset.screen; store.set("screen", S.screen); render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (t.dataset.plan) { const p = t.dataset.plan; if (S.plans.includes(p)) S.plans = S.plans.filter(x => x !== p); else if (S.plans.length < 3) S.plans.push(p); render(); return; }
     if (t.id === "undo") { S.hidden = S.toast.undo.hidden; S.picks = S.toast.undo.picks; store.set("hidden", S.hidden); S.toast = null; render(); return; }
@@ -610,13 +684,21 @@ body[data-screen="welcome"] footer { text-align: center; margin-top: 8px; }
       clearTimeout(window.__tt); window.__tt = setTimeout(() => { S.toast = null; render(); }, 5000);
       render(); return;
     }
-    if (t.dataset.cycle) { const slot = t.dataset.cycle, p = WEATHER[S.weather].pieces.find(x => x.slot === slot), all = [p.id, ...p.alts], cur = S.picks[slot] || p.id; S.picks[slot] = all[(all.indexOf(cur) + 1) % all.length]; render(); return; }
+    if (t.dataset.cycle) { const slot = t.dataset.cycle, p = weather().pieces.find(x => x.slot === slot), all = [p.id, ...p.alts], cur = S.picks[slot] || p.id; S.picks[slot] = all[(all.indexOf(cur) + 1) % all.length]; render(); return; }
     if (t.dataset.slot) { S.open = S.open === t.dataset.slot ? null : t.dataset.slot; render(); return; }
     if (t.dataset.swap) { const [slot, id] = t.dataset.swap.split(":"); S.picks[slot] = id; render(); return; }
     if (t.id === "shuffle") { outfit().forEach(p => { const all = p.options, cur = p.id; S.picks[p.slot] = all[(all.indexOf(cur) + 1) % all.length]; }); render(); }
   });
+  document.addEventListener("change", e => {
+    if (e.target.id !== "m" && e.target.id !== "d") return;
+    const m = Number(document.getElementById("m").value) || (S.bday && S.bday.m) || 1, d = Number(document.getElementById("d").value) || (S.bday && S.bday.d) || 1;
+    S.bday = { m, d: Math.min(d, DIM[m - 1]) }; store.set("bday", S.bday); render();
+  });
+  document.addEventListener("input", e => { if (e.target.id === "city") S.draft = e.target.value; });
+  document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "city") { e.preventDefault(); submitSetup(); } });
   let lastWide = window.innerWidth >= 960;
   window.addEventListener("resize", () => { const w = window.innerWidth >= 960; if (w !== lastWide) { lastWide = w; render(); } });
+  if (S.city) loadWeather().then(() => { if (S.screen === "loading") S.screen = "today"; render(); }).catch(() => { S.screen = "setup"; render(); });
   render();
 })();
 </script>
