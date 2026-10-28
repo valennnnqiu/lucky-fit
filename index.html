@@ -500,6 +500,80 @@ footer a { color: var(--ink); }
     });
     S.live = { city: name, days };
   }
+  const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  async function drawGarment(ctx, id, hex, x, y, w, h) {
+    const [fill, line] = await Promise.all([loadImg(`garments/${id}.fill.png`), loadImg(`garments/${id}.line.png`)]);
+    const c = document.createElement("canvas"); c.width = line.width; c.height = line.height;
+    const g = c.getContext("2d");
+    g.fillStyle = hex; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = "destination-in"; g.drawImage(fill, 0, 0, c.width, c.height);
+    g.globalCompositeOperation = "source-over"; g.drawImage(line, 0, 0, c.width, c.height);
+    const k = Math.min(w / c.width, h / c.height), dw = c.width * k, dh = c.height * k;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+  const rrect = (ctx, x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+  async function renderTag() {
+    const W = weather(), col = current(), pcs = outfit();
+    const hero = pcs.find(p => p.lucky) || pcs[0], rest = pcs.filter(p => p !== hero);
+    const cs = getComputedStyle(document.documentElement), disp = cs.getPropertyValue("--display").trim(), wght = cs.getPropertyValue("--display-wght").trim() || "600";
+    const body = getComputedStyle(document.body).fontFamily;
+    await Promise.all([document.fonts.load(`${wght} 64px ${disp}`), document.fonts.load(`800 30px ${body}`)]).catch(() => {});
+    const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1440;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = mix(col.hex, "#ffffff", .82); ctx.fillRect(0, 0, 1080, 1440);
+    const X = 90, Y = 150, CW = 900, CH = 1170, cut = 56, pad = 56, iw = CW - pad * 2;
+    ctx.save();
+    ctx.shadowColor = "rgba(17,17,17,.18)"; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20;
+    ctx.fillStyle = "#fff"; ctx.beginPath();
+    ctx.moveTo(X + cut, Y); ctx.lineTo(X + CW - cut, Y); ctx.lineTo(X + CW, Y + cut); ctx.lineTo(X + CW, Y + CH); ctx.lineTo(X, Y + CH); ctx.lineTo(X, Y + cut); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = mix(col.hex, "#ffffff", .82); ctx.beginPath(); ctx.arc(540, Y + 40, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#111"; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(400, 20); ctx.quadraticCurveTo(520, 150, 540, Y + 40); ctx.quadraticCurveTo(560, 150, 680, 20); ctx.stroke();
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#111"; ctx.font = `${wght} 40px ${disp}`; ctx.textAlign = "left"; ctx.fillText("Lucky Fit", X + pad, Y + 128);
+    ctx.fillStyle = "#5b5e66"; ctx.font = `800 30px ${body}`; ctx.textAlign = "right";
+    ctx.fillText(new Date(Date.now() + (S.which === "today" ? 0 : 864e5)).toLocaleDateString("en-US", { month: "short", day: "numeric" }), X + CW - pad, Y + 126);
+    const hy = Y + 170, hh = 520;
+    ctx.fillStyle = mix(col.hex, "#ffffff", .84); rrect(ctx, X + pad, hy, iw, hh, 44); ctx.fill();
+    await drawGarment(ctx, hero.id, hero.color.hex, X + pad + 130, hy + 36, iw - 260, hh - 72);
+    const ry = hy + hh + 24, rh = 190, gap = 18, n = rest.length, rw = (iw - gap * (n - 1)) / n;
+    for (let i = 0; i < n; i++) {
+      const x = X + pad + i * (rw + gap);
+      ctx.fillStyle = "#F3F3F7"; rrect(ctx, x, ry, rw, rh, 32); ctx.fill();
+      await drawGarment(ctx, rest[i].id, rest[i].color.hex, x + 14, ry + 14, rw - 28, rh - 28);
+    }
+    const ly = ry + rh + 36;
+    ctx.strokeStyle = "#e4e4ea"; ctx.lineWidth = 4; ctx.setLineDash([14, 12]); ctx.beginPath(); ctx.moveTo(X + pad, ly); ctx.lineTo(X + CW - pad, ly); ctx.stroke(); ctx.setLineDash([]);
+    const range = `${deg(W.min)}${W.min < 0 ? " / " : "–"}${deg(W.max)}`;
+    ctx.textAlign = "right"; ctx.fillStyle = "#111"; ctx.font = `${wght} 50px ${disp}`; ctx.fillText(range, X + CW - pad, ly + 100);
+    const rangeW = ctx.measureText(range).width;
+    let fs = 72; ctx.textAlign = "left";
+    do { ctx.font = `${wght} ${fs}px ${disp}`; fs -= 2; } while (ctx.measureText(col.name).width > iw - rangeW - 40 && fs > 30);
+    ctx.fillText(col.name, X + pad, ly + 100);
+    ctx.fillStyle = "#5b5e66"; ctx.font = `600 30px ${body}`; ctx.fillText(`Wear a little ${col.name} today. Top, scarf, anything.`, X + pad, ly + 156);
+    ctx.textAlign = "center"; ctx.fillStyle = "#5b5e66"; ctx.font = `700 28px ${body}`; ctx.fillText("valennnnqiu.github.io/lucky-fit", 540, 1410);
+    return new Promise(res => cv.toBlob(res, "image/png"));
+  }
+  async function saveImage(btn) {
+    btn.disabled = true;
+    try {
+      const blob = await renderTag(), name = `lucky-fit-${new Date().toISOString().slice(0, 10)}.png`, file = new File([blob], name, { type: "image/png" });
+      const touch = matchMedia("(pointer: coarse)").matches;
+      if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "My Lucky Fit" }); return; } catch (e) { if (e.name === "AbortError") return; }
+      }
+      if (!touch && window.showSaveFilePicker) {
+        try {
+          const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "PNG image", accept: { "image/png": [".png"] } }] });
+          const w = await h.createWritable(); await w.write(blob); await w.close(); return;
+        } catch (e) { if (e.name === "AbortError") return; }
+      }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000); say("Saved to your downloads");
+    } catch { say("Couldn't make the image. Try again."); }
+    finally { btn.disabled = false; }
+  }
   function say(text) { S.toast = { text }; render(); clearTimeout(window.__tt); window.__tt = setTimeout(() => { S.toast = null; render(); }, 4000); }
   async function submitSetup() {
     if (S.busy) return;
@@ -612,7 +686,7 @@ footer a { color: var(--ink); }
         </div>
         <div class="actions">
           <button type="button" class="btn" id="shuffle">Shuffle</button>
-          <button type="button" class="btn go">Save image</button>
+          <button type="button" class="btn go" id="save">Save image</button>
         </div>
         </div>
         <section class="card r-fit" aria-label="The fit">
@@ -693,6 +767,7 @@ footer a { color: var(--ink); }
     if (t.dataset.screen === "today" && S.screen === "setup") { submitSetup(); return; }
     if (t.dataset.wear) { S.wear = t.dataset.wear; store.set("wear", S.wear); render(); return; }
     if (t.id === "locate") { locate(); return; }
+    if (t.id === "save") { saveImage(t); return; }
     if (t.dataset.screen) { S.screen = t.dataset.screen; store.set("screen", S.screen); render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (t.dataset.plan) { const p = t.dataset.plan; if (S.plans.includes(p)) S.plans = S.plans.filter(x => x !== p); else if (S.plans.length < 3) S.plans.push(p); render(); return; }
     if (t.id === "undo") { S.hidden = S.toast.undo.hidden; S.picks = S.toast.undo.picks; store.set("hidden", S.hidden); S.toast = null; render(); return; }
