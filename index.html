@@ -80,6 +80,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   flex-direction: column;
 }
+.cityf { position: relative; }
+.sugg { position: absolute; z-index: 10; left: 0; right: 0; top: 100%; margin: 6px 0 0; padding: 6px; list-style: none; background: var(--paper); border-radius: 20px; box-shadow: 0 12px 32px rgba(17, 17, 17, .16), inset 0 0 0 2px var(--rule); }
+.sugg[hidden] { display: none; }
+.sugg-item { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 11px 14px; border-radius: 14px; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; }
+.sugg-item:hover, .sugg-item:focus-visible { background: rgba(17, 17, 17, .06); }
 .mark.home { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .mark { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: var(--display-wght); letter-spacing: var(--display-track); font-size: 20px; line-height: 1; }
@@ -433,7 +438,7 @@ footer a { color: var(--ink); }
     set(k, v) { try { localStorage.setItem("luckyfit:" + k, JSON.stringify(v)); } catch {} },
   };
   const S = { type: store.get("type", "unbounded"), color: store.get("color", 2), weather: store.get("weather", "cold"), screen: store.get("screen", "welcome"),
-    bday: store.get("bday", null), city: store.get("city", null), wear: store.get("wear", "both"), live: null, draft: null, busy: false,
+    bday: store.get("bday", null), city: store.get("city", null), wear: store.get("wear", "both"), live: null, draft: null, sugg: [], busy: false,
     which: "today", plans: ["office"], open: null, hidden: store.get("hidden", []), toast: null, labOpen: false, picks: {}, luckySlot: null };
 
   const hx = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -468,13 +473,24 @@ footer a { color: var(--ink); }
     return { scen, min, max, feels, pop, sky: `${cond} and ${word}`, detail: `${deg(feels[0])} at 8am, ${deg(feels[6])} by 2pm. ${rain}` };
   }
   async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
-  async function geocode(q) {
-    const [name, region] = q.split(",").map(x => x.trim());
-    const { results } = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en`);
-    if (!results || !results.length) throw new Error("none");
-    const r = (region && results.find(x => [x.admin1, x.country, x.country_code].some(v => v && v.toLowerCase().startsWith(region.toLowerCase())))) || results[0];
-    return { q, name: r.name, lat: r.latitude, lon: r.longitude };
+  let suggN = 0;
+  function paintSugg() {
+    const ul = document.getElementById("sugg");
+    if (!ul) return;
+    ul.hidden = !S.sugg.length;
+    ul.innerHTML = S.sugg.map((c, i) => `<li><button type="button" class="sugg-item" role="option" data-pick="${i}">${c.q}</button></li>`).join("");
   }
+  async function suggest(text) {
+    const n = ++suggN, name = text.split(",")[0].trim();
+    if (name.length < 2) { S.sugg = []; return paintSugg(); }
+    try {
+      const { results } = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=6&language=en`);
+      if (n !== suggN) return;
+      S.sugg = (results || []).map(r => ({ q: [r.name, r.admin1, r.country].filter(Boolean).join(", "), name: r.name, lat: r.latitude, lon: r.longitude }));
+    } catch { if (n !== suggN) return; S.sugg = []; }
+    paintSugg();
+  }
+  function pick(c) { S.city = c; store.set("city", c); S.draft = c.q; S.sugg = []; render(); }
   async function loadWeather() {
     const { lat, lon, name } = S.city;
     const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=apparent_temperature,precipitation_probability,weather_code&forecast_days=2&timezone=auto`);
@@ -490,11 +506,9 @@ footer a { color: var(--ink); }
     const q = (document.getElementById("city")?.value ?? "").trim();
     if (!S.bday) return say("Pick your birthday for your lucky color");
     if (!q) return say("Add a city to get your forecast");
+    if (!S.city || S.city.q !== q) return say("Pick your city from the list");
     S.busy = true; S.draft = q; render();
-    try {
-      if (!S.city || S.city.q !== q) { S.city = await geocode(q); store.set("city", S.city); }
-      await loadWeather();
-    } catch { S.busy = false; return say("Couldn't get a forecast for that city. Try a bigger one nearby."); }
+    try { await loadWeather(); } catch { S.busy = false; return say("Couldn't get a forecast for that city. Try again in a moment."); }
     S.busy = false; S.draft = null; S.screen = "today"; store.set("screen", "today"); render(); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function locate() {
@@ -574,6 +588,7 @@ footer a { color: var(--ink); }
             <button type="button" class="city" data-screen="setup">📍 ${W.city}</button>
           </div>
           <div class="chart">${chart(W)}</div>
+          <button type="button" class="hide" data-screen="setup" style="margin-top:12px">Edit birthday &amp; city</button>
         </section>
         <section class="r-plan">
           <div class="plan-head"><h2 class="section-h" id="planH">What's the plan?</h2><span class="count" aria-live="polite">${S.plans.length >= 3 ? "3 of 3 picked" : "Up to 3"}</span></div>
@@ -641,7 +656,7 @@ footer a { color: var(--ink); }
       <div class="right"><section class="card" style="padding:22px">
         <h2 class="section-h" style="font-size:26px">Quick setup</h2>
         <div class="field"><label for="m">🎂 Birthday</label><div class="row"><select id="m">${opt("", "Month", !b).replace("<option", "<option disabled")}${MONTHS.map((n, i) => opt(i + 1, n, b && b.m === i + 1)).join("")}</select><select id="d" style="flex:.5">${opt("", "Day", !b).replace("<option", "<option disabled")}${Array.from({ length: dmax }, (_, i) => opt(i + 1, i + 1, b && b.d === i + 1)).join("")}</select></div></div>
-        <div class="field"><label for="city">📍 City</label><div class="row"><input id="city" placeholder="Search a city" autocomplete="off" value="${(S.draft ?? (S.city && S.city.q) ?? "").replace(/"/g, "&quot;")}"><button type="button" class="round" id="locate" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 9.5L18 2l-7.5 16-1.6-6.9z" fill="currentColor"/></svg></button></div></div>
+        <div class="field cityf"><label for="city">📍 City</label><div class="row"><input id="city" placeholder="Search a city" autocomplete="off" role="combobox" aria-expanded="${S.sugg.length > 0}" aria-controls="sugg" value="${(S.draft ?? (S.city && S.city.q) ?? "").replace(/"/g, "&quot;")}"><button type="button" class="round" id="locate" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 9.5L18 2l-7.5 16-1.6-6.9z" fill="currentColor"/></svg></button></div><ul id="sugg" class="sugg" role="listbox" aria-label="Cities"${S.sugg.length ? "" : " hidden"}>${S.sugg.map((c, i) => `<li><button type="button" class="sugg-item" role="option" data-pick="${i}">${c.q}</button></li>`).join("")}</ul></div>
         <div class="field"><label>👖 Usually wear</label><div class="pills" style="margin-top:0">${wear.map(([k, l]) => `<button class="pill" type="button" data-wear="${k}" aria-pressed="${S.wear === k}">${l}</button>`).join("")}</div></div>
         <button type="button" class="btn go" style="width:100%;margin-top:28px;height:58px;font-size:17px" data-screen="today"${S.busy ? " disabled" : ""}>${S.busy ? "Checking the sky…" : "See my fit"}</button>
       </section></div>
@@ -668,8 +683,10 @@ footer a { color: var(--ink); }
   }
 
   document.addEventListener("click", e => {
+    if (S.sugg.length && !e.target.closest(".cityf")) { S.sugg = []; paintSugg(); }
     const t = e.target.closest("button");
     if (!t) return;
+    if (t.dataset.pick) { pick(S.sugg[Number(t.dataset.pick)]); return; }
     if (false) { S.labOpen = !S.labOpen; $lab.hidden = !S.labOpen; t.setAttribute("aria-expanded", S.labOpen); return; }
     if (t.dataset.set) { const [k, v] = t.dataset.set.split(":"); S[k] = k === "color" ? Number(v) : v; if (k === "weather") { S.picks = {}; S.luckySlot = null; S.open = null; } store.set(k, S[k]); render(); return; }
     if (t.dataset.which) { S.which = t.dataset.which; document.querySelectorAll("#daySeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.which === S.which)); S.picks = {}; S.luckySlot = null; render(); document.getElementById("mainChip")?.classList.add("popping"); return; }
@@ -696,8 +713,12 @@ footer a { color: var(--ink); }
     const m = Number(document.getElementById("m").value) || (S.bday && S.bday.m) || 1, d = Number(document.getElementById("d").value) || (S.bday && S.bday.d) || 1;
     S.bday = { m, d: Math.min(d, DIM[m - 1]) }; store.set("bday", S.bday); render();
   });
-  document.addEventListener("input", e => { if (e.target.id === "city") S.draft = e.target.value; });
-  document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "city") { e.preventDefault(); submitSetup(); } });
+  document.addEventListener("input", e => { if (e.target.id !== "city") return; S.draft = e.target.value; clearTimeout(window.__sg); window.__sg = setTimeout(() => suggest(S.draft), 250); });
+  document.addEventListener("keydown", e => {
+    if (e.target.id !== "city") return;
+    if (e.key === "Escape") { S.sugg = []; paintSugg(); }
+    if (e.key === "Enter") { e.preventDefault(); if (S.sugg.length) pick(S.sugg[0]); else submitSetup(); }
+  });
   let lastWide = window.innerWidth >= 960;
   window.addEventListener("resize", () => { const w = window.innerWidth >= 960; if (w !== lastWide) { lastWide = w; render(); } });
   if (S.city) loadWeather().then(() => { if (S.screen === "loading") S.screen = "today"; render(); }).catch(() => { S.screen = "setup"; render(); });
